@@ -1,0 +1,48 @@
+version: "3.9"
+
+volumes:
+  pgdata:
+
+networks:
+  my_net:
+
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: 'my_db'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgrespwd'
+    ports:
+      - "5555:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d my_db"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./logs:/var/log
+    networks:
+      - my_net
+  backend:
+    build: .
+    command: python3 manage.py migrate
+    ports:
+      - "8888:8000"
+    volumes:
+      - .:/crud
+    depends_on:
+      - postgres
+    networks:
+      - my_net
+  nginx:
+    image: nginx:latest
+    ports:
+      - "8080:8000"
+    networks:
+      - my_net
+
+  
